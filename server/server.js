@@ -1,6 +1,5 @@
 const express = require("express");
 
-
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
@@ -18,7 +17,7 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 // --- SQLite ---
-fs.mkdirSync(path.join(__dirname, "data"), {recursive: true});
+fs.mkdirSync(path.join(__dirname, "data"), { recursive: true });
 
 const DB_PATH = path.join(__dirname, "data", "restaurant.db");
 const SCHEMA_PATH = path.join(__dirname, "db", "schema.sql");
@@ -78,8 +77,18 @@ app.get("/", (req, res) => res.send("LAN Ordering Server is running"));
 
 app.get("/health", (req, res) => res.json({ ok: true }));
 
+app.get("/api/menu", (req, res) => {
+  const items = db.prepare("SELECT * FROM menu_items").all();
+  res.json(items);
+});
+
 app.post("/api/orders", (req, res) => {
-  const { items, customer_name = null, table_number = null, notes = null } = req.body;
+  const {
+    items,
+    customer_name = null,
+    table_number = null,
+    notes = null,
+  } = req.body;
 
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: "items must be a non-empty array" });
@@ -89,7 +98,7 @@ app.post("/api/orders", (req, res) => {
     const info = db
       .prepare(
         `INSERT INTO orders (customer_name, table_number, notes, status, created_at, updated_at)
-         VALUES (?, ?, ?, 'NEW', datetime('now'), datetime('now'))`
+         VALUES (?, ?, ?, 'NEW', datetime('now'), datetime('now'))`,
       )
       .run(customer_name, table_number, notes);
 
@@ -97,12 +106,18 @@ app.post("/api/orders", (req, res) => {
 
     const insertItem = db.prepare(
       `INSERT INTO order_items (order_id, menu_item_id, item_name, unit_price_cents, quantity)
-       VALUES (?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?)`,
     );
 
     for (const it of items) {
-      if (!it.item_name || !Number.isInteger(it.unit_price_cents) || !Number.isInteger(it.quantity)) {
-        throw new Error("Each item needs item_name (string), unit_price_cents (int), quantity (int)");
+      if (
+        !it.item_name ||
+        !Number.isInteger(it.unit_price_cents) ||
+        !Number.isInteger(it.quantity)
+      ) {
+        throw new Error(
+          "Each item needs item_name (string), unit_price_cents (int), quantity (int)",
+        );
       }
 
       insertItem.run(
@@ -110,7 +125,7 @@ app.post("/api/orders", (req, res) => {
         it.menu_item_id ?? null,
         it.item_name,
         it.unit_price_cents,
-        it.quantity
+        it.quantity,
       );
     }
 
@@ -125,7 +140,9 @@ app.post("/api/orders", (req, res) => {
   }
 
   const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(orderId);
-  const orderItems = db.prepare("SELECT * FROM order_items WHERE order_id = ?").all(orderId);
+  const orderItems = db
+    .prepare("SELECT * FROM order_items WHERE order_id = ?")
+    .all(orderId);
 
   const fullOrder = { ...order, items: orderItems };
   io.emit("order:new", fullOrder);
@@ -134,19 +151,24 @@ app.post("/api/orders", (req, res) => {
 
 app.get("/api/orders", (req, res) => {
   const orders = db.prepare("SELECT * FROM orders ORDER BY id DESC").all();
-    const itemsStmt = db.prepare("SELECT * FROM order_items WHERE order_id = ?");
+  const itemsStmt = db.prepare("SELECT * FROM order_items WHERE order_id = ?");
 
-    
-  res.json(orders.map(o => ({ ...o, items: itemsStmt.all(o.id) })));
+  res.json(orders.map((o) => ({ ...o, items: itemsStmt.all(o.id) })));
 });
 
 app.patch("/api/orders/:id", (req, res) => {
   const { status } = req.body;
-  db.prepare("UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, req.params.id);
-  const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(req.params.id);
-    const items = db.prepare("SELECT * FROM order_items WHERE order_id = ?").all(req.params.id);
+  db.prepare(
+    "UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?",
+  ).run(status, req.params.id);
+  const order = db
+    .prepare("SELECT * FROM orders WHERE id = ?")
+    .get(req.params.id);
+  const items = db
+    .prepare("SELECT * FROM order_items WHERE order_id = ?")
+    .all(req.params.id);
 
-    const fullOrder = {...order, items};
+  const fullOrder = { ...order, items };
   io.emit("order:update", fullOrder);
   res.json(fullOrder);
 });
