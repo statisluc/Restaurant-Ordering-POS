@@ -173,7 +173,12 @@ app.patch("/api/orders/:id", (req, res) => {
   res.json(fullOrder);
 });
 
-io.on("connection", () => {});
+// io.on("connection", () => {});
+
+io.on("connection", (socket) => {
+  console.log("Socket connected:", socket.id);
+  socket.on("disconnect", () => console.log("Socket disonnected:", socket.id));
+});
 
 // --- Print QR to terminal for customer URL ---
 (async () => {
