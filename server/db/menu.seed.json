@@ -1,0 +1,58 @@
+[
+  {
+    "name": "Fries",
+    "description": "Beer battered fries with side of ketchup and chipotle mayo",
+    "price_cents": 899,
+    "category": "Sides",
+    "is_available": 1
+  },
+  {
+    "name": "",
+    "description": "",
+    "price_cents": "",
+    "category": "",
+    "is_available": 1
+  },
+  {
+    "name": "",
+    "description": "",
+    "price_cents": "",
+    "category": "",
+    "is_available": 1
+  },
+  {
+    "name": "",
+    "description": "",
+    "price_cents": "",
+    "category": "",
+    "is_available": 1
+  },
+  {
+    "name": "",
+    "description": "",
+    "price_cents": "",
+    "category": "",
+    "is_available": 1
+  },
+  {
+    "name": "",
+    "description": "",
+    "price_cents": "",
+    "category": "",
+    "is_available": 1
+  },
+  {
+    "name": "",
+    "description": "",
+    "price_cents": "",
+    "category": "",
+    "is_available": 1
+  },
+  {
+    "name": "",
+    "description": "",
+    "price_cents": "",
+    "category": "",
+    "is_available": 1
+  }
+]
