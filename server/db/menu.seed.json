@@ -7,52 +7,52 @@
     "is_available": 1
   },
   {
-    "name": "",
-    "description": "",
-    "price_cents": "",
-    "category": "",
+    "name": "Baked Chappelle",
+    "description": "A very very very baked mac and cheese, served with a side of punch - hold the line.",
+    "price_cents": "1299",
+    "category": "Entree",
     "is_available": 1
   },
   {
-    "name": "",
-    "description": "",
-    "price_cents": "",
-    "category": "",
+    "name": "Calamari B",
+    "description": "And I would've gotten away with it if it weren't for those meddling chefs!",
+    "price_cents": "1499",
+    "category": "Sides",
     "is_available": 1
   },
   {
-    "name": "",
-    "description": "",
-    "price_cents": "",
-    "category": "",
+    "name": "Michael Catfish",
+    "description": "We beat this catfish so hard it couldn't get enough, left blood on the dance floor, moved to Chicago, and had a daugter named Jillie Bean with that nasty ass Diana",
+    "price_cents": "1799",
+    "category": "Entree",
     "is_available": 1
   },
   {
-    "name": "",
-    "description": "",
-    "price_cents": "",
-    "category": "",
+    "name": "Lupe Frittata",
+    "description": "I don't even know if we cooked this right, order at your own discretion.",
+    "price_cents": "899",
+    "category": "Breakfast",
     "is_available": 1
   },
   {
-    "name": "",
-    "description": "",
-    "price_cents": "",
-    "category": "",
+    "name": "Burger Ramsey",
+    "description": "A burger cooked so rare it'll knock your socks off (so they can put a tag on your toe).",
+    "price_cents": "1299",
+    "category": "Entree",
     "is_available": 1
   },
   {
-    "name": "",
-    "description": "",
-    "price_cents": "",
-    "category": "",
+    "name": "Balsamic Obama",
+    "description": "Bowl of balsamic vinegar with - HEY? Who put that lettuce in there!?",
+    "price_cents": "399",
+    "category": "Healthy",
     "is_available": 1
   },
   {
-    "name": "",
-    "description": "",
-    "price_cents": "",
-    "category": "",
+    "name": "Armani Caesar",
+    "description": "Caesar salad with onions, onions, and more onions. The salad only has onions. And our most expensive menu item.",
+    "price_cents": "2299",
+    "category": "Healthy",
     "is_available": 1
   }
 ]

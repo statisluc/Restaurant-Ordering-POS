@@ -1,5 +1,6 @@
-const express = require("express");
+require("dotenv").config(); //loads .env into process.env
 
+const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
@@ -9,14 +10,28 @@ const os = require("os");
 const fs = require("fs");
 const path = require("path");
 
+const lanOnly = require("./middleware/lanOnly");
+
+//Routers endpoints
+const createMenuRouter = require("./routes/menu");
+const createOrdersRouter = require("./routes/orders");
+const createAdminRouter = require("./routes/admin");
+
 const app = express();
+
+//middleware to parse JSON request body
 app.use(express.json());
+
+//middleware to allow frontend to contact backend
 app.use(cors());
 
+//creates real HTTP server so socket.io can attach to it
 const server = http.createServer(app);
+
+//socket.io server (for that realtime fun stuff)
 const io = new Server(server, { cors: { origin: "*" } });
 
-// --- SQLite ---
+//sqlite setup
 fs.mkdirSync(path.join(__dirname, "data"), { recursive: true });
 
 const DB_PATH = path.join(__dirname, "data", "restaurant.db");
@@ -26,16 +41,7 @@ const db = new Database(DB_PATH);
 db.pragma("foreign_keys = ON");
 db.exec(fs.readFileSync(SCHEMA_PATH, "utf8"));
 
-// const db = new Database(path.join(__dirname, "data", "restaurant.db"));
-// db.exec(`
-//   CREATE TABLE IF NOT EXISTS orders (
-//     id INTEGER PRIMARY KEY AUTOINCREMENT,
-//     createdAt TEXT NOT NULL,
-//     status TEXT NOT NULL,
-//     items TEXT NOT NULL,
-//     total INTEGER NOT NULL
-//   );
-// `);
+//finds LAN IP for QR code
 
 function getLanIp() {
   const nets = os.networkInterfaces();
@@ -48,139 +54,28 @@ function getLanIp() {
 }
 
 const PORT = process.env.PORT || 3000;
-const HOST = "0.0.0.0"; // IMPORTANT: listen on all interfaces
+const HOST = "0.0.0.0";
 const LAN_IP = getLanIp();
 
-// --- LAN-only restriction (simple + effective) ---
-function isPrivateIp(ip) {
-  // handles "::ffff:192.168.1.10" too
-  const clean = ip.replace("::ffff:", "");
-  return (
-    clean.startsWith("10.") ||
-    clean.startsWith("192.168.") ||
-    /^172\.(1[6-9]|2\d|3[0-1])\./.test(clean) ||
-    clean === "127.0.0.1"
-  );
-}
+//lan only restrictions
+app.use(lanOnly);
 
-app.use((req, res, next) => {
-  const ip =
-    (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
-    req.socket.remoteAddress ||
-    "";
-  if (!isPrivateIp(ip)) return res.status(403).send("LAN only");
-  next();
-});
-
-// --- Routes ---
+//health and info routes
 app.get("/", (req, res) => res.send("LAN Ordering Server is running"));
+app.get("health", (req, res) => res.json({ ok: true }));
 
-app.get("/health", (req, res) => res.json({ ok: true }));
+//routers get mounted under /api
+app.use("/api", createMenuRouter(db));
+app.use("/api", createOrdersRouter(db, io));
+app.use("/api", createAdminRouter(db));
 
-app.get("/api/menu", (req, res) => {
-  const items = db.prepare("SELECT * FROM menu_items").all();
-  res.json(items);
-});
-
-app.post("/api/orders", (req, res) => {
-  const {
-    items,
-    customer_name = null,
-    table_number = null,
-    notes = null,
-  } = req.body;
-
-  if (!Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ error: "items must be a non-empty array" });
-  }
-
-  const createOrder = db.transaction(() => {
-    const info = db
-      .prepare(
-        `INSERT INTO orders (customer_name, table_number, notes, status, created_at, updated_at)
-         VALUES (?, ?, ?, 'NEW', datetime('now'), datetime('now'))`,
-      )
-      .run(customer_name, table_number, notes);
-
-    const orderId = info.lastInsertRowid;
-
-    const insertItem = db.prepare(
-      `INSERT INTO order_items (order_id, menu_item_id, item_name, unit_price_cents, quantity)
-       VALUES (?, ?, ?, ?, ?)`,
-    );
-
-    for (const it of items) {
-      if (
-        !it.item_name ||
-        !Number.isInteger(it.unit_price_cents) ||
-        !Number.isInteger(it.quantity)
-      ) {
-        throw new Error(
-          "Each item needs item_name (string), unit_price_cents (int), quantity (int)",
-        );
-      }
-
-      insertItem.run(
-        orderId,
-        it.menu_item_id ?? null,
-        it.item_name,
-        it.unit_price_cents,
-        it.quantity,
-      );
-    }
-
-    return orderId;
-  });
-
-  let orderId;
-  try {
-    orderId = createOrder();
-  } catch (e) {
-    return res.status(400).json({ error: e.message });
-  }
-
-  const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(orderId);
-  const orderItems = db
-    .prepare("SELECT * FROM order_items WHERE order_id = ?")
-    .all(orderId);
-
-  const fullOrder = { ...order, items: orderItems };
-  io.emit("order:new", fullOrder);
-  res.json(fullOrder);
-});
-
-app.get("/api/orders", (req, res) => {
-  const orders = db.prepare("SELECT * FROM orders ORDER BY id DESC").all();
-  const itemsStmt = db.prepare("SELECT * FROM order_items WHERE order_id = ?");
-
-  res.json(orders.map((o) => ({ ...o, items: itemsStmt.all(o.id) })));
-});
-
-app.patch("/api/orders/:id", (req, res) => {
-  const { status } = req.body;
-  db.prepare(
-    "UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?",
-  ).run(status, req.params.id);
-  const order = db
-    .prepare("SELECT * FROM orders WHERE id = ?")
-    .get(req.params.id);
-  const items = db
-    .prepare("SELECT * FROM order_items WHERE order_id = ?")
-    .all(req.params.id);
-
-  const fullOrder = { ...order, items };
-  io.emit("order:update", fullOrder);
-  res.json(fullOrder);
-});
-
-// io.on("connection", () => {});
-
+//logs Socket for debugging
 io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id);
-  socket.on("disconnect", () => console.log("Socket disonnected:", socket.id));
+  socket.on("disconnect", () => console.log("Socket disconnected:", socket.id));
 });
 
-// --- Print QR to terminal for customer URL ---
+//prints QR to terminal
 (async () => {
   const baseUrl = `http://${LAN_IP}:${PORT}`;
   const qr = await QRCode.toString(baseUrl, { type: "terminal", small: true });
@@ -189,6 +84,7 @@ io.on("connection", (socket) => {
   console.log(qr);
 })();
 
+//start
 server.listen(PORT, HOST, () => {
-  console.log(`Server listening on ${HOST}:${PORT}`);
+  console.log(`Server is Listening on ${HOST}:${PORT}`);
 });
