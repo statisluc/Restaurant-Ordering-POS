@@ -6,7 +6,7 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
-const requireAdminKey = require(".../middleware/requireAdminKey");
+const requireAdminKey = require("../middleware/requireAdminKey");
 
 module.exports = function createAdminRouter(db) {
   const router = express.Router();
