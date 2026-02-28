@@ -19,8 +19,9 @@ function isLoopback(ip) {
 }
 
 function isPrivateIPv4(ip) {
-  const clean = normalize(ip);
+  const clean = normalizeIP(ip);
 
+  // Must look like IPv4
   if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(clean)) return false;
 
   const parts = clean.split(".").map(Number);
@@ -28,55 +29,35 @@ function isPrivateIPv4(ip) {
 
   const [a, b] = parts;
 
+  // 10.0.0.0/8
   if (a === 10) return true;
 
+  // 192.168.0.0/16
   if (a === 192 && b === 168) return true;
 
-  if (a === 172 && b >= b === 16 && b <= 31) return true;
+  // 172.16.0.0 – 172.31.255.255
+  if (a === 172 && b >= 16 && b <= 31) return true;
 
   return false;
-  i;
-
-  //loopback from local machine (chromebook)
-  function isAllowedLAN(ip) {
-    if (isLoopback(ip)) return true;
-
-    if (isPrivateIPv4(ip)) return true;
-
-    return false;
-  }
-
-  module.exports = function lanOnly(req, rest, next) {
-    //reminder to
-    //app.set("trust proxy", true);
-    //in server.js
-    //if using proxy in the future
-    const ip = req.ip || req.socket?.remoteAddress || "";
-
-    if (isAllowedLAN(ip)) return next();
-
-    return res.status(403).send("CONNECT TO LAN - LAN ONLY");
-  };
 }
 
-function isPrivateIp(ip) {
-  //checks if IP address looks like private LAN IP
-  const clean = (ip || "").replace("::ffff:", ""); //trims off the excess IP from the beginning
-  return (
-    //lists private ranges (10, 192, 172, etc)
-    clean.startsWith("10.") ||
-    clean.startsWith("192.168.") ||
-    /^172\.(1[6-9]|2\d|3[0-1])\./.test(clean) ||
-    clean === "127.0.0.1"
-  );
+//loopback from local machine (chromebook)
+function isAllowedLAN(ip) {
+  return isLoopback(ip) || isPrivateIPv4(ip);
 }
 
 module.exports = function lanOnly(req, res, next) {
-  const ip =
-    (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
-    req.socket.remoteAddress ||
-    "";
+  //reminder to
+  //app.set("trust proxy", true);
+  //in server.js
+  //if using proxy in the future
+  const ip = req.ip || req.socket?.remoteAddress || "";
 
-  if (isPrivateIp(ip)) return res.status(403).send("CONNECT TO LAN - LAN ONLY"); //if not LAN, block
-  next(); //if LAN, allow request
+  //remember to remove
+  console.log("lanOnly ip:", ip);
+
+  if (!isAllowedLAN(ip)) {
+    return res.status(403).send("CONNECT TO LAN - LAN ONLY");
+  }
+  return next();
 };
