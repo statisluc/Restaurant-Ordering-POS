@@ -60,14 +60,21 @@ const LAN_IP = getLanIp();
 //lan only restrictions
 app.use(lanOnly);
 
+
 //health and info routes
 app.get("/", (req, res) => res.send("LAN Ordering Server is running"));
-app.get("health", (req, res) => res.json({ ok: true }));
+app.get("/health", (req, res) => res.json({ ok: true }));
 
 //routers get mounted under /api
 app.use("/api", createMenuRouter(db));
 app.use("/api", createOrdersRouter(db, io));
 app.use("/api", createAdminRouter(db));
+
+//single URL
+app.use(express.static(path.join(__dirname, "..", "client", "dist"))); //needs ".." to go up one directory
+app.get(/.*/, (req, res) => { 
+    res.sendFile(path.join(__dirname,"..", "client", "dist", "index.html"));
+    });
 
 //logs Socket for debugging
 io.on("connection", (socket) => {
