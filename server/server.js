@@ -43,15 +43,52 @@ db.exec(fs.readFileSync(SCHEMA_PATH, "utf8"));
 
 //finds LAN IP for QR code
 
+function isRFC1918(ip) {
+  return (
+    ip.startsWith("10.") ||
+    ip.startsWith("192.168.") ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip)
+  );
+}
+
+// 100.64.0.0/10 (CGNAT / often seen in ChromeOS VM networking)
+function isCGNAT(ip) {
+  return /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(ip);
+}
+
 function getLanIp() {
   const nets = os.networkInterfaces();
+  const candidates = [];
+
   for (const name of Object.keys(nets)) {
-    for (const net of nets[name]) {
-      if (net.family === "IPv4" && !net.internal) return net.address;
+    for (const net of nets[name] || []) {
+      if (net.family === "IPv4" && !net.internal) {
+        candidates.push(net.address);
+      }
     }
   }
-  return "127.0.0.1";
+
+  // Prefer real LAN IPs first (192.168 / 10 / 172.16-31)
+  const rfc1918 = candidates.find(isRFC1918);
+  if (rfc1918) return rfc1918;
+
+  // Otherwise, avoid CGNAT like 100.115.* if possible
+  const nonCgnat = candidates.find((ip) => !isCGNAT(ip));
+  if (nonCgnat) return nonCgnat;
+
+  // Fallback
+  return candidates[0] || "127.0.0.1";
 }
+
+// function getLanIp() {
+//   const nets = os.networkInterfaces();
+//   for (const name of Object.keys(nets)) {
+//     for (const net of nets[name]) {
+//       if (net.family === "IPv4" && !net.internal) return net.address;
+//     }
+//   }
+//   return "127.0.0.1";
+// }
 
 const PORT = process.env.PORT || 3000;
 const HOST = "0.0.0.0";
@@ -59,7 +96,6 @@ const LAN_IP = getLanIp();
 
 //lan only restrictions
 app.use(lanOnly);
-
 
 //health and info routes
 app.get("/", (req, res) => res.send("LAN Ordering Server is running"));
@@ -72,9 +108,9 @@ app.use("/api", createAdminRouter(db));
 
 //single URL
 app.use(express.static(path.join(__dirname, "..", "client", "dist"))); //needs ".." to go up one directory
-app.get(/.*/, (req, res) => { 
-    res.sendFile(path.join(__dirname,"..", "client", "dist", "index.html"));
-    });
+app.get(/.*/, (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "client", "dist", "index.html"));
+});
 
 //logs Socket for debugging
 io.on("connection", (socket) => {

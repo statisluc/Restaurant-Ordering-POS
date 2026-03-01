@@ -1,48 +1,65 @@
 import { useEffect, useState } from "react";
-import { io } from "socket.io-client";
 
-//port in LAN where chromebook server runs
-const SERVER_URL = "http://localhost:3000";
+//connects back to the same origin that served the page (connects back to port 3000 automatically)
+import socket from "../socket";
 
 export default function Kitchen() {
   const [orders, setOrders] = useState([]);
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    //initial load which shows existing orders if any exist (from restaurant.db)
-    fetch(`${SERVER_URL}/api/orders`) //orders
-      .then((r) => r.json())
-      .then(setOrders)
-      .catch(console.error); //"here is what messed up"
-
-    //establishes live socket connection
-    const socket = io(SERVER_URL);
-
     socket.on("connect", () => setConnected(true));
     socket.on("disconnect", () => setConnected(false));
 
-    // prioritizes new orders - places new orders to the top
     socket.on("order:new", (fullOrder) => {
-      setOrders((prev) => [fullOrder, ...prev]);
-    });
-
-    // updates orders (new, in process, delivered, completed)
-    socket.on("order:update", (fullOrder) => {
       setOrders((prev) =>
         prev.map((o) => (o.id === fullOrder.id ? fullOrder : o)),
       );
     });
 
-    //cleanup , turns off connection when leaving page so we dont leave it open/exposed
     return () => {
+      socket.off("connect");
+      socket.off("disconnect");
       socket.off("order:new");
-      socket.off("order:updated");
-      socket.disconnect();
+      socket.off("order:update");
     };
   }, []);
 
+  //   useEffect(() => {
+  //     //initial load which shows existing orders if any exist (from restaurant.db)
+  //     fetch(`${SERVER_URL}/api/orders`) //orders
+  //       .then((r) => r.json())
+  //       .then(setOrders)
+  //       .catch(console.error); //"here is what messed up"
+
+  //     //establishes live socket connection
+  //     const socket = io(SERVER_URL);
+
+  //     socket.on("connect", () => setConnected(true));
+  //     socket.on("disconnect", () => setConnected(false));
+
+  //     // prioritizes new orders - places new orders to the top
+  //     socket.on("order:new", (fullOrder) => {
+  //       setOrders((prev) => [fullOrder, ...prev]);
+  //     });
+
+  //     // updates orders (new, in process, delivered, completed)
+  //     socket.on("order:update", (fullOrder) => {
+  //       setOrders((prev) =>
+  //         prev.map((o) => (o.id === fullOrder.id ? fullOrder : o)),
+  //       );
+  //     });
+
+  //     //cleanup , turns off connection when leaving page so we dont leave it open/exposed
+  //     return () => {
+  //       socket.off("order:new");
+  //       socket.off("order:updated");
+  //       socket.disconnect();
+  //     };
+  //   }, []);
+
   async function setStatus(id, status) {
-    const res = await fetch(`${SERVER_URL}/api/orders/${id}`, {
+    const res = await fetch(`/api/orders/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
