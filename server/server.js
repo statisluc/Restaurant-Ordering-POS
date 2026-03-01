@@ -92,13 +92,13 @@ function getLanIp() {
 
 const PORT = process.env.PORT || 3000;
 const HOST = "0.0.0.0";
-const LAN_IP = getLanIp();
+const LAN_HOST = process.env.LAN_HOST || getLanIp();
 
 //lan only restrictions
 app.use(lanOnly);
 
 //health and info routes
-app.get("/", (req, res) => res.send("LAN Ordering Server is running"));
+// app.get("/", (req, res) => res.send("LAN Ordering Server is running"));
 app.get("/health", (req, res) => res.json({ ok: true }));
 
 //routers get mounted under /api
@@ -120,7 +120,7 @@ io.on("connection", (socket) => {
 
 //prints QR to terminal
 (async () => {
-  const baseUrl = `http://${LAN_IP}:${PORT}`;
+  const baseUrl = `http://${LAN_HOST}:${PORT}`;
   const qr = await QRCode.toString(baseUrl, { type: "terminal", small: true });
   console.log("\nCustomer URL:", baseUrl);
   console.log("Kitchen URL:", baseUrl + "/kitchen");
