@@ -76,6 +76,8 @@ module.exports = function createOrdersRouter(db, io) {
 
     const fullOrder = { ...order, items: orderItems };
 
+    //logging for placing new order
+    console.log("EMITTING order:new", fullOrder.id);
     //realtime update, pushes new order
     io.emit("order:new", fullOrder);
 

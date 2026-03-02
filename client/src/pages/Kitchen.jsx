@@ -11,6 +11,11 @@ export default function Kitchen() {
   const [qrDataUrl, setQrDataUrl] = useState("");
 
   useEffect(() => {
+    //load pre-existing orders upon page load
+    fetch("/api/orders")
+      .then((r) => r.json())
+      .then(setOrders)
+      .catch(console.error);
     (async () => {
       try {
         const res = await fetch("/api/info");
@@ -31,6 +36,13 @@ export default function Kitchen() {
     socket.on("disconnect", () => setConnected(false));
 
     socket.on("order:new", (fullOrder) => {
+      //   setOrders((prev) =>
+      //     prev.map((o) => (o.id === fullOrder.id ? fullOrder : o)),
+      //   );
+      setOrders((prev) => [fullOrder, ...prev]);
+    });
+
+    socket.on("order:update", (fullOrder) => {
       setOrders((prev) =>
         prev.map((o) => (o.id === fullOrder.id ? fullOrder : o)),
       );
