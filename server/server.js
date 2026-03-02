@@ -16,6 +16,7 @@ const lanOnly = require("./middleware/lanOnly");
 const createMenuRouter = require("./routes/menu");
 const createOrdersRouter = require("./routes/orders");
 const createAdminRouter = require("./routes/admin");
+const createSystemRouter = require("./routes/system");
 
 const app = express();
 
@@ -105,8 +106,9 @@ app.get("/health", (req, res) => res.json({ ok: true }));
 app.use("/api", createMenuRouter(db));
 app.use("/api", createOrdersRouter(db, io));
 app.use("/api", createAdminRouter(db));
+app.use("/api", createSystemRouter());
 
-//single URL
+//single URL + catch all
 app.use(express.static(path.join(__dirname, "..", "client", "dist"))); //needs ".." to go up one directory
 app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, "..", "client", "dist", "index.html"));

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import QRCode from "qrcode";
 
 //connects back to the same origin that served the page (connects back to port 3000 automatically)
 import socket from "../socket";
@@ -6,8 +7,26 @@ import socket from "../socket";
 export default function Kitchen() {
   const [orders, setOrders] = useState([]);
   const [connected, setConnected] = useState(false);
+  const [baseUrl, setBaseUrl] = useState("");
+  const [qrDataUrl, setQrDataUrl] = useState("");
 
   useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/info");
+        const data = await res.json();
+        setBaseUrl(data.baseUrl);
+
+        const qr = await QRCode.toDataURL(data.baseUrl, {
+          margin: 1,
+          scale: 8,
+        });
+        setQrDataUrl(qr);
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+
     socket.on("connect", () => setConnected(true));
     socket.on("disconnect", () => setConnected(false));
 
@@ -72,10 +91,57 @@ export default function Kitchen() {
   }
 
   return (
-    <div style={{ padding: 16, fontFamily: "system-ui" }}>
+    <div
+      style={{
+        padding: 16,
+        fontFamily: "system-ui",
+        // display: "grid",
+        // justifyContent: "center",
+      }}
+    >
       <h1>Kitchen Dashboard</h1>
       <div style={{ opacity: 0.8 }}>
         Socket: {connected ? "Connected" : "Disconnected"}
+      </div>
+
+      <div
+        style={{
+          marginTop: 12,
+          display: "flex",
+          gap: 16,
+          alignItems: "center",
+        }}
+      >
+        <div>
+          <div style={{ fontWeight: 700 }}>Customer QR</div>
+          <div style={{ opacity: 0.8, fontSize: 12 }}>{baseUrl}</div>
+        </div>
+
+        {qrDataUrl ? (
+          <img
+            src={qrDataUrl}
+            alt="Customer QR Code"
+            style={{
+              width: 180,
+              height: 180,
+              borderRadius: 12,
+              border: "1px solid #ddd",
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: 180,
+              height: 180,
+              display: "grid",
+              placeItems: "center",
+              border: "1px solid #ddd",
+              borderRadius: 12,
+            }}
+          >
+            Loading QR Code
+          </div>
+        )}
       </div>
 
       {orders.length === 0 ? (
