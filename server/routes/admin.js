@@ -24,7 +24,12 @@ module.exports = function createAdminRouter(db) {
       }
 
       const insert = db.prepare(
-        `INSERT INTO menu_items (name, description, category, price_cents, is_available) VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO menu_items (name, description, category, price_cents, is_available) VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(name) DO UPDATE SET 
+        description = excluded.description,
+        category = excluded.category,
+        price_cents = excluded.price_cents,
+        is_available = excluded.is_available`,
       );
 
       const importTx = db.transaction(() => {

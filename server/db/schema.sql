@@ -33,4 +33,5 @@ CREATE TABLE IF NOT EXISTS order_items (
 
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status_created ON orders(status, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_menu_items_name_unique ON menu_items(name); 
     

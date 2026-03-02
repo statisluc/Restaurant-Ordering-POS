@@ -19,7 +19,8 @@ module.exports = function createOrdersRouter(db, io) {
     const {
       items,
       customer_name = null,
-      table_number = (null.notes = null),
+      table_number = null,
+      notes = null,
     } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -36,7 +37,7 @@ module.exports = function createOrdersRouter(db, io) {
       const orderId = info.lastInsertRowid;
 
       const insertItem = db.prepare(
-        `INSER INTO order_items (order_id, menu_item_id, item_name, unit_price_cents, quantity) VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO order_items (order_id, menu_item_id, item_name, unit_price_cents, quantity) VALUES (?, ?, ?, ?, ?)`,
       );
 
       for (const it of items) {
@@ -54,7 +55,6 @@ module.exports = function createOrdersRouter(db, io) {
           orderId,
           it.menu_item_id ?? null,
           it.item_name,
-            it.notes,
           it.unit_price_cents,
           it.quantity,
         );
@@ -95,6 +95,17 @@ module.exports = function createOrdersRouter(db, io) {
   //after updating orders, emit order:update so dashboard syncs
   router.patch("/orders/:id", (req, res) => {
     const { status } = req.body;
+
+    const allowed = new Set([
+      "NEW",
+      "IN_PROGRESS",
+      "READY",
+      "COMPLETED",
+      "CANCELLED",
+    ]);
+    if (!allowed.has(status)) {
+      return res.status(400).json({ error: `Invalid Status: ${status}` });
+    }
 
     db.prepare(
       "UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?",

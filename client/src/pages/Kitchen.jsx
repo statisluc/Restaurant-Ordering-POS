@@ -187,7 +187,9 @@ export default function Kitchen() {
                   START
                 </button>
                 <button onClick={() => setStatus(o.id, "READY")}>READY</button>
-                <button onClick={() => setStatus(o.id, "DONE")}>DONE</button>
+                <button onClick={() => setStatus(o.id, "COMPLETED")}>
+                  DONE
+                </button>
               </div>
             </div>
           ),

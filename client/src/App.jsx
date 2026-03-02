@@ -138,6 +138,11 @@ export default function App() {
                   <div style={{ opacity: 0.7 }}>
                     ${(it.price_cents / 100).toFixed(2)}
                   </div>
+                  {it.description && (
+                    <div style={{ opacity: 0.75, fontSize: 13, marginTop: 2 }}>
+                      {it.description}
+                    </div>
+                  )}
                 </div>
                 <button onClick={() => addToCart(it)}>Add</button>
               </div>
