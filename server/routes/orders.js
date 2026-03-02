@@ -54,6 +54,7 @@ module.exports = function createOrdersRouter(db, io) {
           orderId,
           it.menu_item_id ?? null,
           it.item_name,
+            it.notes,
           it.unit_price_cents,
           it.quantity,
         );
