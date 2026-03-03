@@ -182,7 +182,7 @@ export default function Kitchen() {
                   ? `Name: ${o.customer_name}`
                   : "No customer name"}{" "}
                 {o.table_number
-                  ? `Table: ${o.table_number}`
+                  ? `|| Table: ${o.table_number}`
                   : "No Table Number"}
               </div>
 
@@ -192,6 +192,7 @@ export default function Kitchen() {
                     {it.quantity}x {it.item_name}
                   </div>
                 ))}
+                {`Notes: ${o.notes}`}
               </div>
 
               <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
