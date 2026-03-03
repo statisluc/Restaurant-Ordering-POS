@@ -4,6 +4,11 @@ import QRCode from "qrcode";
 //connects back to the same origin that served the page (connects back to port 3000 automatically)
 import socket from "../socket";
 
+function isOlderThan1Hour(order) {
+  const created = new Date(order.created_at);
+  return Date.now() - created.getTime() > 60 * 60 * 1000;
+}
+
 export default function Kitchen() {
   const [orders, setOrders] = useState([]);
   const [connected, setConnected] = useState(false);
@@ -14,7 +19,7 @@ export default function Kitchen() {
     //load pre-existing orders upon page load
     fetch("/api/orders")
       .then((r) => r.json())
-      .then(setOrders)
+      .then((data) => setOrders(data.filter((o) => !isOlderThan1Hour(o))))
       .catch(console.error);
     (async () => {
       try {
@@ -36,6 +41,7 @@ export default function Kitchen() {
     socket.on("disconnect", () => setConnected(false));
 
     socket.on("order:new", (fullOrder) => {
+      if (isOlderThan1Hour(fullOrder)) return; //prevents old orders from showing up for 30secs when socket reconnects
       //   setOrders((prev) =>
       //     prev.map((o) => (o.id === fullOrder.id ? fullOrder : o)),
       //   );
@@ -48,7 +54,12 @@ export default function Kitchen() {
       );
     });
 
+    const t = setInterval(() => {
+      setOrders((prev) => prev.filter((o) => !isOlderThan1Hour(o)));
+    }, 30_000);
+
     return () => {
+      clearInterval(t);
       socket.off("connect");
       socket.off("disconnect");
       socket.off("order:new");
@@ -192,7 +203,11 @@ export default function Kitchen() {
                     {it.quantity}x {it.item_name}
                   </div>
                 ))}
-                {`Notes: ${o.notes}`}
+                {o.notes ? (
+                  <div style={{ marginTop: 8, opacity: 0.85 }}>
+                    <strong>Notes:</strong> {o.notes}
+                  </div>
+                ) : null}
               </div>
 
               <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
@@ -202,6 +217,9 @@ export default function Kitchen() {
                 <button onClick={() => setStatus(o.id, "READY")}>READY</button>
                 <button onClick={() => setStatus(o.id, "COMPLETED")}>
                   DONE
+                </button>
+                <button onClick={() => setStatus(o.id, "CANCELLED")}>
+                  CANCEL
                 </button>
               </div>
             </div>
